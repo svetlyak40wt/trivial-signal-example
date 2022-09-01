@@ -1,0 +1,55 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp
+  (ql:quickload "trivial-signal" :silent t))
+
+
+(defpackage :ros.script.multiple-handlers
+  (:use :cl))
+(in-package :ros.script.multiple-handlers)
+
+
+(defun handle-interrupt (signum)
+  (format t "~%Catched ~A signal. Gracefully exiting from the program.~%"
+          (trivial-signal:signal-name signum))
+  (uiop:quit 1))
+
+
+(defun handle-reload (signum)
+  (format t "~%Catched ~A signal. Doing hot code reload and returning back to work.~%"
+          (trivial-signal:signal-name signum)))
+
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  
+  (let ((timeout 15))
+    (handler-bind ((trivial-signal:unix-signal
+                     (lambda (condition)
+                       ;; Now we want ignore the SIGHUP signal and let program continue to work.
+                       (let ((restart (find-restart 'ignore)))
+                         (when (and (= (trivial-signal:signo condition)
+                                       trivial-signal:+sigusr1+)
+                                    restart)
+                           (invoke-restart restart))))))
+      (trivial-signal:signal-handler-bind
+          ((:sigint #'handle-interrupt)
+           (:sigterm #'handle-interrupt)
+           (:sigkill #'handle-interrupt)
+           (:sigusr1 #'handle-reload))
+        (format t "Now I'm going to sleep ~A seconds.~%"
+                timeout)
+        #+sbcl
+        (format t "Try to execute \"kill -USR1 ~A\" or \"kill -TERM ~A\" in another console.~%"
+                (sb-posix:getpid)
+                (sb-posix:getpid))
+
+        (sleep timeout)
+        (format t "Done.~%")))))
+
+;;; vim: set ft=lisp lisp:

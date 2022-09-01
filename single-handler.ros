@@ -1,0 +1,32 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp
+  (ql:quickload "trivial-signal" :silent t))
+
+
+(defpackage :ros.script.example
+  (:use :cl))
+(in-package :ros.script.example)
+
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  
+  (let ((timeout 15))
+    (trivial-signal:with-signal-handler
+        :sigint
+        (lambda (signum)
+          (format t "~%Catched ~A signal. Gracefully exiting from the program.~%"
+                  (trivial-signal:signal-name signum))
+          (uiop:quit 1))
+      (format t "Now I'm going to sleep ~A seconds.~%"
+              timeout)
+      (sleep timeout)
+      (format t "Done.~%"))))
+
+;;; vim: set ft=lisp lisp:
