@@ -21,7 +21,7 @@ exec ros -Q -- $0 "$@"
     (trivial-signal:with-signal-handler
         :sigint
         (lambda (signum)
-          (format t "~%Catched ~A signal. Gracefully exiting from the program.~%"
+          (format t "~%Caught ~A signal. Gracefully exiting from the program.~%"
                   (trivial-signal:signal-name signum))
           (uiop:quit 1))
       (format t "Now I'm going to sleep ~A seconds.~%"
